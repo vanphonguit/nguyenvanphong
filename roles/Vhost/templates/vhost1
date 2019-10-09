@@ -1,0 +1,185 @@
+fastcgi_cache_path /var/cache/fastcgi_cache_path/{{ server_name }} levels=1:2 keys_zone={{ server_name }}:10m inactive=10m max_size=64m;
+
+server {
+
+    listen 80;
+
+    server_name www.{{ server_name }};
+    access_log /home/{{ group_domain }}/{{ server_name }}/logs/access.log;
+    error_log /home/{{ group_domain }}/{{ server_name }}/logs/error.log;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    return 301 http://{{ server_name }}$request_uri;
+}
+
+server {
+
+    listen 80;
+    server_name {{ server_name }};
+    access_log /home/{{ group_domain }}/{{ server_name }}/logs/access.log;
+    error_log /home/{{ group_domain }}/{{ server_name }}/logs/error.log;
+
+    root /home/{{ group_domain }}/{{ server_name }}/public_html;
+    index index.php index.html index.htm;
+    index index.html index.php;
+
+
+    if ($request_method !~ ^(GET|HEAD|POST)$) {
+
+        return 444;
+    }
+
+    set $no_cache 0;
+    if ($request_method = POST) {
+
+        set $no_cache 1;
+    }
+    if ($query_string != "") {
+
+        set $no_cache 1;
+    }
+
+    if ( $cookie_woocommerce_items_in_cart != "0" ) {
+        set $skip_cache 1;
+    }
+
+    if ( $arg_add-to-cart != "" ) {
+        set $skip_cache 1;
+    }
+
+    if ($request_uri ~* "(/wp-admin/|/xmlrpc.php|/wp-(app|cron|login|register|mail).php|wp-.*.php|/thanh-toan.*|/gio-hang.*|/feed/|index.php|wp-comments-popup.php|wp-links-opml.php|wp-locations.php|sitemap(_index)?.xml|[a-z0-9_-]+-sitemap([0-9]+)?.xml)") {
+
+        set $no_cache 1;
+    }
+    if ($http_cookie ~* "comment_author|wordpress_[a-f0-9]+|wp-postpass|wordpress_no_cache|wordpress_logged_in") {
+
+        set $no_cache 1;
+    }
+
+
+    # if ($http_user_agent ~* (Joomla|MJ12bot))
+    #  {
+    #
+    #   return 403;
+    # }
+    location ^~ /.well-known/ {
+
+        allow all;
+    }
+    location ~* ^.+.(jpg|woff|jpeg|gif|png|ico|zip|tgz|gz|rar|bz2|iso|doc|xls|exe|pdf|ppt|txt|tar|mid|midi|wav|bmp|rtf|mp3|ogv|ogg|flv|swf|mpeg|mpg|mpeg4|mp4|avi|wmv|3gp|sis|sisx|nth)$ {
+
+        add_header Cache-Control "public, must-revalidate, proxy-revalidate";
+        expires 30d;
+        log_not_found off;
+    }
+    location ~* ^.+.(js|css)$ {
+
+        add_header Vary "Accept-Encoding";
+        expires 7d;
+        log_not_found off;
+    }
+
+    location ^~ /wp-login.php {
+
+        if ($allowed_country = no) {
+
+            return 403;
+        }
+        auth_basic "Admin Login";
+        auth_basic_user_file /etc/nginx/pma_pass;
+        fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+        if (!-f $document_root$fastcgi_script_name) {
+
+            return 404;
+        }
+        include fastcgi.conf;
+        include fastcgiproxy.conf;
+        fastcgi_cache_lock on;
+        fastcgi_cache_use_stale error timeout invalid_header updating http_500;
+
+        fastcgi_ignore_headers Cache-Control Expires Set-Cookie;
+        fastcgi_cache_key $scheme$request_method$host$request_uri;
+        fastcgi_cache_valid 30m;
+        fastcgi_cache_valid 404 503 502 1m;
+        add_header VANPHONG $upstream_cache_status;
+        fastcgi_cache {{ server_name }};
+        fastcgi_cache_bypass $no_cache;
+        fastcgi_no_cache $no_cache;
+
+
+        fastcgi_connect_timeout 60;
+        fastcgi_send_timeout 75;
+        fastcgi_read_timeout 75;
+        fastcgi_buffer_size 512k;
+        fastcgi_buffers 512 16k;
+        fastcgi_busy_buffers_size 512k;
+        fastcgi_temp_file_write_size 512k;
+        fastcgi_intercept_errors on;
+        fastcgi_pass unix:/dev/shm/{{ server_name }}.sock;
+
+    }
+
+    location ~ /purge(/.*) {
+
+        auth_basic "Admin Login";
+        auth_basic_user_file /etc/nginx/pma_pass;
+        fastcgi_cache_purge {{ server_name }} "$scheme$request_method$host$1";
+    }
+
+    location ~ /\.ht {
+
+        deny all;
+    }
+    location ~* \.php$ {
+
+        limit_req zone=one burst=7 nodelay;
+        fastcgi_index index.php;
+        fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+        if (!-f $document_root$fastcgi_script_name) {
+
+            return 404;
+        }
+        include fastcgi.conf;
+        include fastcgiproxy.conf;
+        fastcgi_cache_lock on;
+        fastcgi_cache_use_stale error timeout invalid_header updating http_500;
+
+        fastcgi_ignore_headers Cache-Control Expires Set-Cookie;
+        fastcgi_cache_key $scheme$request_method$host$request_uri;
+        fastcgi_cache_valid 30m;
+        fastcgi_cache_valid 404 503 502 1m;
+        add_header {{ server_name }} $upstream_cache_status;
+        fastcgi_cache {{ server_name }};
+        fastcgi_cache_bypass $no_cache;
+        fastcgi_no_cache $no_cache;
+
+
+        fastcgi_connect_timeout 60;
+        fastcgi_send_timeout 75;
+        fastcgi_read_timeout 75;
+        fastcgi_buffer_size 512k;
+        fastcgi_buffers 512 16k;
+        fastcgi_busy_buffers_size 512k;
+        fastcgi_temp_file_write_size 512k;
+        fastcgi_intercept_errors on;
+        fastcgi_pass unix:/dev/shm/{{ server_name }}.sock;
+    }
+
+    location / {
+
+        include fastcgi.conf;
+        include fastcgiproxy.conf;
+        try_files $uri $uri/ /index.php?$query_string;
+
+    }
+
+    location ~*.*\.(cgi|cgI|cGi|cGI|Cgi|CgI|CGi|CGI)$ {
+
+        if ($request_uri !~* ^\/cgi-sys\/(entropysearch|FormMail-clone|welcome|defaultwebpage|suspendedpage|movingpage|redirect|swhmredirect|sredirect|whmredirect|bxd)\..*$) {
+
+            return 403;
+        }
+    }
+}
+
+

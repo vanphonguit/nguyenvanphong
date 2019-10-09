@@ -1,0 +1,105 @@
+---
+- name: extract libbrary openssl
+  unarchive:
+    src: '{{source_dir}}/{{ openssl }}'
+    dest: '{{source_dir}}'
+    remote_src: yes
+
+- name: extract library prce
+  unarchive:
+    src: '{{source_dir}}/{{ pcre }}'
+    dest: '{{source_dir}}'
+    remote_src: yes
+
+- name: extract library zlib
+  unarchive:
+    src: '{{source_dir}}/{{ zlib }}'
+    dest: '{{source_dir}}'
+    remote_src: yes
+
+
+- name: extract nginx source
+  unarchive:
+    src: '{{source_dir}}/{{ nginx }}'
+    dest: '{{source_dir}}'
+    remote_src: yes
+
+
+- name: extract pagespeed
+  unarchive:
+    src: '{{source_dir}}/{{ pagespeed }}'
+    dest: '{{source_dir}}'
+    remote_src: yes
+    owner: root
+    group: root
+
+
+- name: download psol for pagespeed
+  get_url:
+    url: https://dl.google.com/dl/page-speed/psol/1.13.35.2-x64.tar.gz
+    dest: '{{ source_dir  }}/{{ fol_pagespeed }}'
+
+- name: extract psol pagespeed
+  unarchive:
+    src: '{{source_dir}}/{{ fol_pagespeed }}/{{ psol }}'
+    dest: '{{ source_dir  }}/{{ fol_pagespeed }}/'
+    remote_src: yes
+
+- name: compile Nginx from source
+  command: ./configure --prefix=/etc/nginx --conf-path=/etc/nginx/nginx.conf --user=nginx --group=nginx --sbin-path=/usr/sbin/nginx  --with-zlib={{ source_dir }}/zlib-1.2.11 --with-http_stub_status_module --with-http_realip_module --with-openssl={{ source_dir }}/openssl-1.0.2k --with-http_geoip_module --with-http_v2_module --without-http_memcached_module --with-http_ssl_module --with-http_gzip_static_module  --with-http_perl_module --with-pcre --with-http_secure_link_module --without-mail_pop3_module --without-mail_imap_module --without-mail_smtp_module --without-http_split_clients_module --without-http_empty_gif_module --without-http_browser_module --without-http_userid_module --add-module={{ source_dir }}/incubator-pagespeed-ngx-latest-stable --add-module={{ source_dir }}/nginx-module-vts --add-module={{ source_dir }}/ngx_cache_purge --add-module={{ source_dir }}/testcookie-nginx-module --add-module={{ source_dir }}/headers-more-nginx-module
+
+  args:
+    chdir: '{{source_dir}}/{{ nginx_name }}'
+  register: nginx_configure
+
+- name: Make install
+  shell: make && make install
+  args:
+    chdir: '{{source_dir}}/{{ nginx_name }}'
+  when: nginx_configure is changed
+
+
+- name: create user system nginx
+  command: useradd -r nginx
+
+- name: create starup service file
+  copy:
+    src: nginx.service
+    dest: /lib/systemd/system/nginx.service
+    owner: root
+    group: root
+
+- name: create folder temp
+  file: 
+    path: /var/cache/nginx
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: start Nginx Service
+  service: name=nginx state=started enabled=yes
+
+- name: copy file nginx conf
+  copy:
+    src: nginx.conf
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+
+- name: copy file fastcgi conf
+  copy:
+    src: fastcgi.conf
+    dest: /etc/nginx/fastcgi.conf
+    owner: root
+    group: root
+
+
+- name: copy file fastcgiproxy conf
+  copy:
+    src: fastcgi.conf
+    dest: /etc/nginx/fastcgiproxy.conf
+    owner: root
+    group: root
+
+

@@ -1,0 +1,64 @@
+---
+- name: download source wordpress
+  get_url:
+    url: https://wordpress.org/latest.zip
+    dest: /home/{{ group_domain }}/{{ server_name }}/public_html/latest.zip
+  tags:
+    - test
+
+- name: extract file zip source
+  unarchive:
+    remote_src: yes
+    src: /home/{{ group_domain }}/{{ server_name }}/public_html/latest.zip
+    dest: /home/{{ group_domain }}/{{ server_name }}/public_html
+  tags:
+    - test
+
+- name: copy source from folder wordpress
+  shell: chdir='/home/{{ group_domain }}/{{ server_name }}/public_html/wordpress' /usr/bin/mv * ../
+  tags:
+    - test
+
+- name: copy wp-config.php file
+  template: src=wp-config.php dest=/home/{{ group_domain }}/{{ server_name }}/public_html/wp-config.php
+  tags:
+    - test
+- name: chown user
+  file:
+    path: '/home/{{ group_domain }}/{{ server_name }}/public_html'
+    recurse: yes
+    owner: '{{ user_domain }}'
+    group: '{{ group_domain }}'
+  tags:
+    - test
+
+- name: delete source  wordpress zip
+  file:
+    dest: '/home/{{ group_domain }}/{{ server_name }}/public_html/latest.zip'
+    state: absent
+  tags:
+    - test
+
+- name: delete source  wordpress zip 2
+  shell: rm -rf /root/src/*.tar.gz
+  args:  
+    executable: /bin/bash
+  tags:
+    - test
+
+- name: disable service httpd, state
+  service:
+    name: firewalld
+    enabled: no
+    state: stopped
+  ignore_errors: yes
+
+- name: Touch a file
+  file:
+    path: /etc/nginx/pma_pass
+    state: touch
+    mode: u=rw,g=r,o=r
+
+- name: htpass
+  command: 'htpasswd -db /etc/nginx/pma_pass ppk47 Tinhvatien!1'
+

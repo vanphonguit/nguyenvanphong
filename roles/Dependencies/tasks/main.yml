@@ -1,0 +1,139 @@
+- name: upgrade all packages
+  yum:
+    name: '*'
+    state: latest
+
+- name: turn off SELinux
+  lineinfile:
+    path: /etc/selinux/config
+    regexp: '^SELINUX='
+    line: 'SELINUX=Disabled'
+  ignore_errors: yes
+
+- name: install ntpdate
+  yum:
+    name:
+      - ntpdate
+    state: present
+
+- name: syns timedate with ntpdate
+  command: ntpdate 1.ro.pool.ntp.org
+
+
+- name: install dependencies packages
+  yum:
+    name:
+      - epel-release
+      - git
+      - wget
+      - zip
+      - unzip
+      - perl-ExtUtils-Embed
+      - pam-devel
+      - gcc
+      - gcc-c++
+      - make
+      - geoip-devel
+      - ntpdate
+    state: present  
+
+- name: install library for php
+  yum:
+    name:
+    - httpd-tools
+    - libxml2-devel
+    - libXpm-devel
+    - gmp-devel
+    - libicu-devel
+    - t1lib-devel
+    - aspell-devel
+    - openssl-devel
+    - bzip2-devel
+    - libcurl-devel
+    - libjpeg-devel
+    - libvpx-devel
+    - libpng-devel
+    - freetype-devel
+    - readline-devel
+    - libtidy-devel
+    - libxslt-devel
+    - libmcrypt-devel
+    - pcre-devel
+    - curl-devel
+    - mysql-devel
+    - ncurses-devel
+    - gettext-devel
+    - net-snmp-devel
+    - libevent-devel
+    - libtool-ltdl-devel
+    - libc-client-devel
+    - postgresql-devel
+    - php-pecl-zip
+    - libzip-devel
+    - libuuid-devel
+    state: present
+
+- name: create folder contains source to compile
+  file:
+    path: '{{ source_dir }}'
+    state: directory
+    mode: '0755'
+
+- name: install dev tools
+  command: yum groupinstall -y 'Development Tools'
+  args:
+    warn: no
+
+- name: download Nginx source to compile
+  get_url:
+    url: http://nginx.org/download/nginx-1.16.0.tar.gz
+    dest: '{{ source_dir  }}'
+
+- name: download pagespeed
+  get_url:
+    url: https://github.com/apache/incubator-pagespeed-ngx/archive/latest-stable.zip
+    dest: '{{ source_dir  }}'
+
+- name: download php7.3 source to compile
+  get_url:
+    url: http://mirror.internode.on.net/pub/php/{{ php7 }}
+    dest: '{{ source_dir  }}'
+
+- name: download library openssl packages for Nginx
+  get_url:
+    url: https://ftp.openssl.org/source/old/1.0.2/{{ openssl }}
+    dest: '{{ source_dir  }}'
+
+- name: download library prce packages for Nginx
+  get_url:
+    url: http://www.mirrorservice.org/sites/ftp.exim.org/pub/pcre/{{ pcre }}
+    dest: '{{ source_dir  }}'
+
+- name: download library zlib packages for Nginx
+  get_url:
+    url: https://download.videolan.org/contrib/zlib/{{ zlib }}
+    dest: '{{ source_dir  }}'
+
+- name: download module third vts for Nginx
+  command: git clone git://github.com/vozlt/nginx-module-vts.git
+  args:
+    chdir: '{{ source_dir  }}'
+  ignore_errors: yes
+
+- name: download module third purge cache for Nginx
+  command: git clone git://github.com/FRiCKLE/ngx_cache_purge.git
+  args:
+    chdir: '{{ source_dir  }}'
+  ignore_errors: yes
+
+- name: download module third teskcokkies for Nginx
+  command: git clone git://github.com/kyprizel/testcookie-nginx-module.git
+  args:
+    chdir: '{{ source_dir  }}'
+  ignore_errors: yes
+
+- name: download module third header more for Nginx
+  command: git clone https://github.com/openresty/headers-more-nginx-module.git
+  args:
+    chdir: '{{ source_dir  }}'
+  ignore_errors: yes

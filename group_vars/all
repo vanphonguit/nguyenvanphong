@@ -1,0 +1,40 @@
+---
+# name lib
+pcre: pcre-8.42.tar.gz
+openssl: openssl-1.0.2k.tar.gz
+zlib: zlib-1.2.11.tar.gz
+pagespeed: incubator-pagespeed-ngx-latest-stable.zip
+fol_pagespeed: incubator-pagespeed-ngx-latest-stable
+psol: 1.13.35.2-x64.tar.gz
+libzip: libzip-1.2.0.tar.gz
+libzip_dir: libzip-1.2.0
+libzip132: libzip-1.3.2.tar.gz
+nginx: 	nginx-1.16.0.tar.gz
+nginx_name: nginx-1.16.0
+
+php7: php-7.2.18.tar.gz
+php_name: php-7.2.18
+
+source_dir: /root/src
+nginx_dir: /etc/nginx
+vhost_nginx_dir: /etc/nginx/conf.d
+host_pass: 123123123
+user_ngx: nginx
+user_domain: jena
+group_domain: jena
+server_name: jena.vn
+fastcgi_cache_path: /var/cache/fastcgi_cache_path
+
+#user_domain: tritran
+#group_domain: tritran
+#server_name: tritran.com
+
+root_password: 1122334455
+mysql_pass_root: 1122334455
+mysql_database: vanphong_data
+mysql_user: vanphong_user
+mysql_pass: 123123
+current_password: ""
+new_password: 1122334455
+mariadb_root_password: 3eXfddF%7EP`b',G
+mysql_root_password: 1122334455

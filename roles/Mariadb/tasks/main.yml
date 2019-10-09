@@ -1,0 +1,80 @@
+- name: add repo mariadb
+  copy:
+    src: MariaDB.repo
+    dest: /etc/yum.repos.d/
+
+- name: install mariadb
+  yum:
+    name:
+      - MariaDB-server
+      - MariaDB-client
+    state: present
+
+- name: install the Python MySQLB module
+  yum:
+    name:
+      - python
+      - python-pip
+      - python-setuptools
+      - MySQL-python
+    state: present
+
+- name: start mariadb service
+  service: name=mariadb state=restarted
+
+- name: Remove anonymous users
+  command: 'mysql -ne "{{ item }}"'
+  with_items:
+    - DELETE FROM mysql.user WHERE User=''
+  changed_when: False
+
+- name: Disallow root login remotely
+  command: 'mysql -ne "{{ item }}"'
+  with_items:
+    - DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1')
+  changed_when: False
+
+
+- name: Remove test database and access to it
+  command: 'mysql -ne "{{ item }}"'
+  with_items:
+    - DROP DATABASE IF EXISTS test
+    - DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%'
+  changed_when: False
+
+- name: Reload privilege tables
+  command: 'mysql -ne "{{ item }}"'
+  with_items:
+    - FLUSH PRIVILEGES
+  changed_when: False
+
+- name: Set root user password
+  mysql_user: name="root"
+              password="{{ mysql_root_password }}"
+              check_implicit_admin=yes
+              login_user="root"
+              login_password=""
+              state=present
+
+- name: Copy the root credentials as .my.cnf file
+  template: src=my.cnf dest=/root/.my.cnf mode=0600
+
+- name: start Mariadb Service
+  service: name=mariadb state=started enabled=yes
+
+
+- name: create database name
+  mysql_db:
+    name: '{{ mysql_database }}'
+    state: present
+  tags: mariadb
+
+- name: create user database
+  mysql_user:
+    name: '{{ mysql_user }}'
+    password: '{{ mysql_pass }}'
+    priv: '*.*:ALL'
+    state: present
+  tags: mariadb
+
+

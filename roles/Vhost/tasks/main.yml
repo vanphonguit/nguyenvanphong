@@ -1,0 +1,158 @@
+---
+- name: create user owner website
+  user:
+    name: '{{ user_domain }}'
+    create_home: no
+  ignore_errors: yes
+  tags:
+    - test
+
+- name: create group owner website
+  group:
+    name: '{{ group_domain }}'
+    state: present
+  ignore_errors: yes
+  tags:
+    - test
+
+- name: create folder contains website mother
+  file:
+    path: '/home/{{ group_domain }}/{{ server_name }}'
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  tags:
+    - test
+
+- name: create folder contains website
+  file:
+    path: '/home/{{ group_domain }}/{{ server_name }}/ssl'
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  tags:
+    - test
+
+- name: create folder contains website
+  file:
+    path: '/home/{{ group_domain }}/{{ server_name }}/public_html'
+    state: directory
+    mode: 0755
+    owner: '{{ user_domain }}'
+    group: '{{ group_domain }}'
+  tags:
+    - test
+
+- name: create folder contains vhsot
+  file:
+    path: /etc/nginx/conf.d
+    state: directory
+
+
+- name: copy template vhost  file
+  template:
+    src: vhost1
+    dest: '/etc/nginx/conf.d/{{ server_name }}.conf'
+  ignore_errors: yes
+  tags:
+    - test
+
+- name: copy template vhost ssl file
+  template:
+    src: vhost2
+    dest: '/etc/nginx/conf.d/{{ server_name }}.ssl.conf'
+  ignore_errors: yes
+  tags:
+    - test
+
+- name: install dependencies packages
+  yum: name={{ item }} state=present
+  with_items:
+    - python
+    - python-pip
+
+- name: install latest pyOpenSSL if needed
+  pip:
+    name: pyOpenSSL
+    state: latest
+
+
+- name: create folder crt
+  file:
+    path: '/etc/ssl/crt'
+    state: directory
+  tags:
+    - test
+
+- name: create folder private
+  file:
+    path: '/etc/ssl/private'
+    state: directory
+  tags:
+    - test
+
+- name: create folder csr
+  file:
+    path: '/etc/ssl/csr'
+    state: directory
+  tags:
+    - test
+
+- name: Generate an OpenSSL private key.
+  openssl_privatekey:
+    path: /etc/ssl/private/ansible.com.pem
+
+- name: Generate an OpenSSL CSR.
+  openssl_csr:
+    path: /etc/ssl/csr/ansible.com.csr
+    privatekey_path: /etc/ssl/private/ansible.com.pem
+    common_name: "{{ server_name }}"
+
+- name: Generate a Self Signed OpenSSL certificate
+  openssl_certificate:
+   path: /etc/ssl/crt/ansible.com.crt
+   privatekey_path: /etc/ssl/private/ansible.com.pem
+   csr_path: /etc/ssl/csr/ansible.com.csr
+   provider: selfsigned
+
+- name: create folder log domain
+  file:
+    path: '/home/{{ group_domain }}/{{ server_name }}/logs'
+    state: directory
+  tags:
+    - test
+
+
+- name: create folder contains fastcgi cache
+  file:
+    path: '{{ fastcgi_cache_path }}'
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+
+
+- name: create folder contains fastcgi cache vhost
+  file:
+    path: '{{ fastcgi_cache_path }}/{{ server_name }}'
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  tags:
+    - test
+
+
+- name: Generate Diffie-Hellman parameters with the default size (4096 bits)
+  openssl_dhparam:
+    path: /etc/nginx/dhparam.pem
+    size: 4096 
+
+- name: restart Nginx service
+  service: name=nginx state=restarted
+  ignore_errors: yes
+  tags:
+    - vhost
+
